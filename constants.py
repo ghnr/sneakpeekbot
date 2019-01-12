@@ -3,7 +3,7 @@ HEADER_SUMMONED_SINGLE = "Hi, here's a sneak peek of that subreddit using the to
 HEADER = "Here's a sneak peek of {} using the [top posts]({}) of {}!\n\n"
 POSTS_PATTERN_SUMMONED = "**{}**:\n\n\#1: {}  \n\#2: {}  \n\#3: {}\n\n"
 POSTS_PATTERN = "\#1: {}  \n\#2: {}  \n\#3: {}\n\n"
-FOOTER = "----\n^^I'm ^^a ^^bot, ^^beep ^^boop ^^| ^^Downvote ^^to ^^remove ^^| [^^Contact ^^me](https://www.reddit.com/message/compose/?to=sneakpeekbot) ^^| [^^Info](https://np.reddit.com/r/sneakpeekbot/) ^^| [^^Opt-out](https://np.reddit.com/r/sneakpeekbot/comments/8wfgsm/blacklist/)"
+FOOTER = "----\n^^I'm ^^a ^^bot, ^^beep ^^boop ^^| ^^Downvote ^^to ^^remove ^^| [^^Contact ^^me](https://www.reddit.com/message/compose/?to=sneakpeekbot) ^^| [^^Info](https://np.reddit.com/r/sneakpeekbot/) ^^| [^^Opt-out](https://np.reddit.com/r/sneakpeekbot/comments/afd0dd/blacklist/)"
 REGEX_PATTERNS = ["/?r/\w+ has a [a-z]{3,}?ly",
                   "((?<!top posts)\sover (?:to|in|at) /?r/)",
                   "((?<!top post)\sover (?:to|in|at) /?r/)",

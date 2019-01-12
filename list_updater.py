@@ -12,7 +12,7 @@ def update_lists():
     
     for message in reddit.inbox.unread(limit=1000):
         # checks the blacklist thread for new replies
-        if message.subject == "post reply" and message.parent_id[3:] == "8wfgsm":
+        if message.subject == "post reply" and message.parent_id[3:] == "afd0dd":
             user_result = re.search("/?u/([a-zA-Z0-9_-]+)", message.body)
             subreddit_result = re.findall("/?r/(\w+)+", message.body)
             if user_result:
