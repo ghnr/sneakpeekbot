@@ -2,6 +2,7 @@
 
 ## TODO
 
+- [ ] Sneakpeek a user (on request), how did I not think of this before!?
 - [ ] Handle multiple subreddits better -> if one fails checks, check next one
 - [ ] JSON too brittle, change | just use a database for everything
 - [ ] Lists > .txt
