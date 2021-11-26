@@ -8,12 +8,12 @@ FOOTER = "^^I'm ^^a ^^bot, ^^beep ^^boop ^^| ^^Downvote ^^to ^^remove ^^| ^^[Con
 " ^^| ^^[Info](https://np.reddit.com/r/sneakpeekbot/) ^^| ^^[Opt-out](https://np.reddit.com/r/sneakpeekbot/comments/o8wk1r/blacklist_ix/)" \
 " ^^| ^^[Source](https://github.com/ghnr/sneakpeekbot)"
 
-# Magic numbers
 INBOX_CHECK_FREQUENCY = 3 * 60 * 60  # 3 hours
 SUBREDDIT_AGE_THRESHOLD = 1095  # 3 years in days
 NUM_RECENT_COMMENTS = 25
 
-REGEX_PATTERNS = [
+# Any pattern to ignore in comments being scanned
+ANTI_REGEX_PATTERNS = [
     r"/?r/\w+ has a [a-z]{3,}?ly",
     r"((?<!top posts)\sover (?:to|in|at) /?r/)",
     r"((?<!top post)\sover (?:to|in|at) /?r/)",

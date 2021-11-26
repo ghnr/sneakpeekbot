@@ -1,16 +1,19 @@
+"""
+Sneakpeekbot - reddit.com/u/sneakpeekbot
+Online since 31st December 2016
+"""
 from collections import defaultdict
 from dataclasses import dataclass
 import json
 import re
-import sys
 import signal
 from time import sleep, time
 import traceback
 import logging
 import os
 import praw
-import prawcore.exceptions as pexcept
 import praw.exceptions
+import prawcore.exceptions as pexcept
 from list_updater import update_lists
 import constants as c
 import utils
@@ -29,11 +32,11 @@ class SubmissionSummary:
 
 @dataclass()
 class RecentRecord:
-    """A data holder for identifying spam patterns."""
+    """A data holder for identifying spam patterns from comments replied to."""
     comment_author: str
     subreddit_name: str
     my_comment_id: str
-    
+
     def __eq__(self, other):
         if isinstance(other, RecentRecord):
             return self.comment_author == other.comment_author and self.subreddit_name == other.subreddit_name
@@ -41,6 +44,7 @@ class RecentRecord:
 
 
 class SneakPeekBot:
+    """Sneakpeekbot streams comments from /r/all, processing them if they match the reply-criteria."""
     def __init__(self):
         self.counter = 0
         self.last_check_time = time()
@@ -71,7 +75,7 @@ class SneakPeekBot:
         self.subreddit_blacklist = txt_to_list("lists/custom_blacklist.txt")
         self.user_blacklist = txt_to_list("lists/custom_blacklist_users.txt")
 
-    def check_conditions(self, comment, subreddit_name, current_subreddit_name, found_subs):
+    def check_conditions(self, comment, subreddit_name, current_subreddit_name):
         """ Check conditions that need to be met, returns True if comment can be processed."""
         conditions_met = False
         # Any match here will mean the comment is ignored
@@ -91,7 +95,7 @@ class SneakPeekBot:
                 logger.info("Subreddit already linked in this post: %s %s", str(comment.submission), subreddit_name)
             elif len(self.submissions[str(comment.submission)]) >= 3:
                 logger.info("Already processed 3 comments in this thread: %s", str(comment.submission))
-        elif re.findall("({}).*".format("|".join(c.REGEX_PATTERNS)), comment.body, flags=re.IGNORECASE):
+        elif re.findall("({}).*".format("|".join(c.ANTI_REGEX_PATTERNS)), comment.body, flags=re.IGNORECASE):
             pass
         elif comment.author in comment.subreddit.moderator():
             # Extra API call is needed so this check is pushed as late as possible
@@ -101,8 +105,8 @@ class SneakPeekBot:
         return conditions_met
 
     def process_comments_stream(self):
-        """ Scan comments on /r/all for subreddit links to see if they meet conditions for processing
-        and then process.
+        """
+        Scan comments on /r/all for subreddit links to see if they meet conditions for processing and then process.
         The karma of recent comments is regularly assessed for deletion. The bot's inbox is also monitored for new
         blacklist requests.
         """
@@ -121,6 +125,10 @@ class SneakPeekBot:
                 if self.check_conditions(comment, subreddit_name, current_subreddit_name, found_subs):
                     subreddit = reddit.subreddit(subreddit_name)
                     posts = self.get_top_subreddit_posts(subreddit)
+                    if len(posts) < 3:
+                        logger.info("Less than 3 total posts: " + subreddit.display_name)
+                        return None
+                    
                     message_string = self.build_string(posts, subreddit)
                     my_comment_id = self.send_reply(comment, message_string, subreddit)
                     self.save_ids(my_comment_id, str(comment.submission), subreddit.display_name)
@@ -151,7 +159,7 @@ class SneakPeekBot:
             if (time() - self.last_check_time) > c.INBOX_CHECK_FREQUENCY:
                 self.check_inbox()
                 self.last_check_time = time()
-    
+
     @staticmethod
     def get_top_subreddit_posts(subreddit):
         """ Get the submission summary of the top 3 subreddit posts."""
@@ -173,18 +181,14 @@ class SneakPeekBot:
                 submission.is_self
             )
             summaries.append(submission_summary)
-            
+
         return summaries
-    
+
     @staticmethod
     def build_string(submissions, subreddit):
-       
-        if len(submissions) < 3:
-            logger.info("Less than 3 total posts: " + subreddit.display_name)
-            return
-
+        """Build out the reply message string using the markdown in constants and the values from the holders."""
         formatted_post_strings = []
-        
+
         for summary in submissions:
             title = str(summary.title).replace("[", r"\[").replace("]", r"\]")
             nsfw_post_string = "**[NSFW]** " if summary.is_nsfw and not subreddit.over18 else ""
@@ -199,20 +203,18 @@ class SneakPeekBot:
                     plural=num_comments_plural,
                     permalink=summary.permalink
                 )
-            
             post_string = c.INDIVIDUAL_POST_PATTERN.format(
                 nsfw_post_string=nsfw_post_string,
                 title=title,
                 post_url=post_url,
                 comments_link=comments_link_string
             )
-
             formatted_post_strings.append(post_string)
 
         nsfw_string = " **[NSFW]**" if subreddit.over18 else ""
 
         if (time() - subreddit.created_utc) / (60*60*24) > c.SUBREDDIT_AGE_THRESHOLD:
-            # Subreddit is more than 3 years old
+            # Subreddit is old so show more recent posts (/5mo9ly/should_the_bot_show_top_posts_of_the_year_or_of/)
             time_filter_string = "the year"
             top_posts_link = f"https://np.reddit.com/r/{subreddit.display_name}/top/?sort=top&t=year"
         else:
@@ -229,9 +231,8 @@ class SneakPeekBot:
             post_2=formatted_post_strings[1],
             post_3=formatted_post_strings[2]
         )
-        
         return message
-    
+
     @staticmethod
     def send_reply(comment, message, subreddit):
         my_comment_id = str(comment.reply(message))
@@ -240,7 +241,7 @@ class SneakPeekBot:
         return my_comment_id
 
     def check_recent_spam_list(self, comment_author, subreddit_name, my_comment_id):
-        """ Checks recent comments processed for any pattern of spam. Deletes replies if spam."""
+        """ Check recently processed comments for any pattern of spam. Delete replies if spam is detected."""
         new_record = RecentRecord(comment_author, subreddit_name, my_comment_id)
         self.recent_spam_check.append(new_record)
         # Only maintain N=25 of the most recent processed pairs
@@ -265,8 +266,7 @@ class SneakPeekBot:
                 self.recent_spam_check.remove(record)
 
     def save_ids(self, my_comment_id, submission_id, linked_subreddit):
-        """ Saves to file the id of the comment reply by the bot and the id of the submission that the comment is in."""
-
+        """ Save to file the id of the comment reply by the bot and the id of the submission that the comment is in."""
         self.posted_comments_id.append(my_comment_id)
 
         with open("lists/comments_replied.txt", "w") as c_file:
